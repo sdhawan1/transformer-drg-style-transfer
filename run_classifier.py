@@ -99,11 +99,13 @@ class DataProcessor(object):
                     line = list(unicode(cell, 'utf-8') for cell in line)
                 lines.append(line)
             return lines
+    
+    ## NOTE: CHANGING THE BELOW: for reddit jokes, we need quoting=csv.QUOTE_MINIMAL with quotechar = " / not "None"
     @classmethod
-    def _read_csv(cls, input_file, quotechar=None):
+    def _read_csv(cls, input_file, quotechar='"'):
         """Reads a coma separated value file."""
         with open(input_file, "r") as f:
-            reader = csv.reader(f, quotechar=quotechar,delimiter="\t")
+            reader = csv.reader(f, quotechar=quotechar,delimiter="\t", quoting=csv.QUOTE_MINIMAL)
             lines = []
             for line in reader:
                 if sys.version_info[0] == 2:

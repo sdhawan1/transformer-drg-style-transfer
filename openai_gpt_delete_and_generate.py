@@ -118,7 +118,11 @@ def main():
 
     logger.info("Encoding dataset...")
     train_dataset = tokenize_and_encode(args.train_dataset)
-    eval_dataset = tokenize_and_encode(args.eval_dataset)
+    ### Modifying: we need to be able to run this without having an eval dataset!
+    if args.do_eval:
+        eval_dataset = tokenize_and_encode(args.eval_dataset)
+    else:
+        eval_dataset = [[]] #just survive the following code without crashing...
     print("Training samples = {}".format(len(train_dataset)))
     print("Validation samples = {}".format(len(eval_dataset)))
     print("Example = {}".format(train_dataset[0]))
@@ -126,7 +130,11 @@ def main():
     # Compute the mex input length for the Transformer
     train_dataset = [x for x in train_dataset if len(x) <= args.max_seq_length and start_token_id in x] # Remove all sentence longer than max_seq_length
     eval_dataset = [x for x in eval_dataset if len(x) <= args.max_seq_length and start_token_id in x]
-    input_length = max(max(len(t) for t in train_dataset), max(len(q) for q in eval_dataset))
+    ### modifying again: no eval dataset.
+    if args.do_eval:
+        input_length = max(max(len(t) for t in train_dataset), max(len(q) for q in eval_dataset))
+    else:
+        input_length = max(len(t) for t in train_dataset)
     if n_gpu > 1:
         input_length = min(input_length, model.module.config.n_positions)
     else:
@@ -166,7 +174,8 @@ def main():
 
     # Prepare input tensors and dataloders
     train_tensor_dataset = pre_process_dataset(train_dataset, input_length, start_token_id=start_token_id)
-    eval_tensor_dataset = pre_process_dataset(eval_dataset, input_length, start_token_id=start_token_id)
+    if args.do_eval:
+        eval_tensor_dataset = pre_process_dataset(eval_dataset, input_length, start_token_id=start_token_id)
 
     print("Training Example Input ids= {}".format(train_tensor_dataset[0][0]))
     print("Training Example Language Modeling ids = {}".format(train_tensor_dataset[1][0]))
@@ -174,10 +183,11 @@ def main():
     train_data = TensorDataset(*train_tensor_dataset)
     train_sampler = RandomSampler(train_data)
     train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.train_batch_size)
-
-    eval_data = TensorDataset(*eval_tensor_dataset)
-    eval_sampler = RandomSampler(eval_data)
-    eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
+    
+    if args.do_eval:
+        eval_data = TensorDataset(*eval_tensor_dataset)
+        eval_sampler = RandomSampler(eval_data)
+        eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
 
     # Prepare optimizer
     param_optimizer = list(model.named_parameters())
